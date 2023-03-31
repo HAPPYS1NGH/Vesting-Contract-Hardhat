@@ -8,8 +8,8 @@ async function main() {
 
     const Vesting = await hre.ethers.getContractFactory("Vesting");
     const vesting = await Vesting.deploy();
+    const OrganisationToken = await hre.ethers.getContractFactory("OrganisationToken");
     const d = new Date();
-  
     await vesting.deployed();
   
     console.log(
@@ -34,11 +34,14 @@ async function main() {
 
     console.log("--------------Fetching Stakeholders----------------");
     const holders = await vesting.getStakeHolders(Organisation1.contractAddress);
-    console.log(holders);
-  }
+    console.log(holders[0]);
+  
 
   console.log("--------------Token Balances----------------");
-
+  const Organisation1Token = await OrganisationToken.attach(Organisation1.contractAddress);
+  const balance = await Organisation1Token.balanceOf(holders[0].stakeHolderAddress)
+  console.log(balance + "----Balance----")
+}
 
 main().catch((error) => {
     console.error(error);

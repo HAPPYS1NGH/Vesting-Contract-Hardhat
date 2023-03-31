@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
+
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-
-// Uncomment this line to use console.log
-import "hardhat/console.sol";
-
-
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+// Uncomment this line to use console.log
+// import "hardhat/console.sol";
 
 contract OrganisationToken is ERC20, Ownable {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
@@ -17,13 +15,13 @@ contract OrganisationToken is ERC20, Ownable {
     }
 }
 
-
 contract Vesting {
     struct stakeHolder {
         string role;
         address stakeHolderAddress;
         uint timeLock;
         uint tokens;
+        bool isWhiteListed;
     }
     struct Organisation {
         string tokenName;
@@ -31,10 +29,16 @@ contract Vesting {
         address contractAddress;
         address admin;
     }
-    mapping (address => Organisation) organisationAddress;
-    mapping (address => stakeHolder[]) stakeHolders;
-    event addedStakeHolder(address organisationAddress ,  string  role, address stakeHolderAddress ,uint timeLock ,uint tokens);
-
+    mapping(address => Organisation) organisationAddress;
+    mapping(address => stakeHolder[]) stakeHolders;
+    mapping(string => stakeHolder[]) stakeHoldersType;
+    event addedStakeHolder(
+        address organisationAddress,
+        string role,
+        address stakeHolderAddress,
+        uint timeLock,
+        uint tokens
+    );
 
     Organisation[] organisations;
     address megaAdmin;
@@ -47,7 +51,9 @@ contract Vesting {
         string memory _tokenName,
         string memory _tokenSymbol
     ) public {
-        address _contractAddress = address(new OrganisationToken(_tokenName, _tokenSymbol));
+        address _contractAddress = address(
+            new OrganisationToken(_tokenName, _tokenSymbol)
+        );
         Organisation memory organisation = Organisation({
             tokenName: _tokenName,
             tokenSymbol: _tokenSymbol,
@@ -58,20 +64,55 @@ contract Vesting {
         organisationAddress[_contractAddress] = organisation;
     }
 
-    function getOrganisations() public view  returns (Organisation[] memory) {
+    function getOrganisations() public view returns (Organisation[] memory) {
         return organisations;
     }
-    function addStakeHolders(address _organisationAddress ,  string memory _role, address _stakeHolderAddress ,uint _timeLock ,uint _tokens) public {
 
-        require(msg.sender == organisationAddress[_organisationAddress].admin, "Only admins can add Stakeholders");
-        OrganisationToken tokenContract = OrganisationToken(_organisationAddress);
-        tokenContract.mint(_stakeHolderAddress , _tokens );
-        stakeHolders[_organisationAddress].push(stakeHolder(_role , _stakeHolderAddress , _timeLock ,_tokens ));
-        emit addedStakeHolder(_organisationAddress ,  _role,  _stakeHolderAddress ,_timeLock , _tokens);
+    function addStakeHolders(
+        address _organisationAddress,
+        string memory _role,
+        address _stakeHolderAddress,
+        uint _timeLock,
+        uint _tokens
+    ) public {
+        require(
+            msg.sender == organisationAddress[_organisationAddress].admin,
+            "Only admins can add Stakeholders"
+        );
+        // OrganisationToken tokenContract = OrganisationToken(_organisationAddress);
+        // tokenContract.mint(_stakeHolderAddress , _tokens );
+        stakeHoldersType[_role].push(
+            stakeHolder(_role, _stakeHolderAddress, _timeLock, _tokens, false)
+        );
+        stakeHolders[_organisationAddress].push(
+            stakeHolder(_role, _stakeHolderAddress, _timeLock, _tokens, false)
+        );
+        emit addedStakeHolder(
+            _organisationAddress,
+            _role,
+            _stakeHolderAddress,
+            _timeLock,
+            _tokens
+        );
     }
-    
-    function getStakeHolders(address _organisationAddress) public view returns (stakeHolder[] memory){
+
+    function getStakeHolders(
+        address _organisationAddress
+    ) public view returns (stakeHolder[] memory) {
         return stakeHolders[_organisationAddress];
     }
-}
 
+    function whitelist(
+        string memory _role,
+        address _organisationAddress
+    ) public {
+        require(
+            msg.sender == organisationAddress[_organisationAddress].admin,
+            "Only admins can Whitelist Stakeholders"
+        );
+        stakeHolder[] storage stakeHoldersOfType = stakeHoldersType[_role];
+        for (uint i = 0; i < stakeHoldersOfType.length; i++) {
+            stakeHoldersOfType[i].isWhiteListed = true;
+        }
+    }
+}
