@@ -17,24 +17,31 @@ contract OrganisationToken is ERC20, Ownable {
 
 contract Vesting {
     struct stakeHolder {
-        string role;
+        UserRole userType;
         address stakeHolderAddress;
         uint timeLock;
         uint tokens;
         bool isWhiteListed;
     }
+
     struct Organisation {
         string tokenName;
         string tokenSymbol;
         address contractAddress;
         address admin;
     }
+    enum UserRole {
+        Founder,
+        Investor,
+        Advisor
+    }
+
     mapping(address => Organisation) organisationAddress;
-    mapping(address => stakeHolder[]) stakeHolders;
-    mapping(string => stakeHolder[]) stakeHoldersType;
+    mapping(address => mapping (UserRole => stakeHolder[] )) Holders;
+
     event addedStakeHolder(
         address organisationAddress,
-        string role,
+        UserRole userRole,
         address stakeHolderAddress,
         uint timeLock,
         uint tokens
@@ -67,52 +74,58 @@ contract Vesting {
     function getOrganisations() public view returns (Organisation[] memory) {
         return organisations;
     }
+    // UserRole userType;
+        address stakeHolderAddress;
+        uint timeLock;
+        uint tokens;
+        bool isWhiteListed;
 
     function addStakeHolders(
-        address _organisationAddress,
-        string memory _role,
+        UserRole _userRole,
         address _stakeHolderAddress,
         uint _timeLock,
-        uint _tokens
+        uint _tokens,
+        address _organisationAddress
     ) public {
         require(
             msg.sender == organisationAddress[_organisationAddress].admin,
             "Only admins can add Stakeholders"
         );
-        // OrganisationToken tokenContract = OrganisationToken(_organisationAddress);
-        // tokenContract.mint(_stakeHolderAddress , _tokens );
-        stakeHoldersType[_role].push(
-            stakeHolder(_role, _stakeHolderAddress, _timeLock, _tokens, false)
-        );
-        stakeHolders[_organisationAddress].push(
-            stakeHolder(_role, _stakeHolderAddress, _timeLock, _tokens, false)
-        );
+        
+        Holders[_organisationAddress][_userRole].push(stakeHolder(_userRole, _stakeHolderAddress, _timeLock, _tokens, false));
         emit addedStakeHolder(
             _organisationAddress,
-            _role,
+            _userRole,
             _stakeHolderAddress,
             _timeLock,
             _tokens
         );
     }
 
-    function getStakeHolders(
-        address _organisationAddress
+    function getHolders(
+        address _organisationAddress ,
+        UserRole _userRole
+
     ) public view returns (stakeHolder[] memory) {
-        return stakeHolders[_organisationAddress];
+        return Holders[_organisationAddress][_userRole] ;
     }
 
     function whitelist(
-        string memory _role,
+        UserRole _userRole,
         address _organisationAddress
     ) public {
         require(
             msg.sender == organisationAddress[_organisationAddress].admin,
             "Only admins can Whitelist Stakeholders"
         );
-        stakeHolder[] storage stakeHoldersOfType = stakeHoldersType[_role];
-        for (uint i = 0; i < stakeHoldersOfType.length; i++) {
-            stakeHoldersOfType[i].isWhiteListed = true;
+        stakeHolder[] storage roleHolders = Holders[_organisationAddress][_userRole];
+        for (uint i = 0; i < roleHolders.length; i++) {
+            roleHolders[i].isWhiteListed = true;
         }
+    }
+
+    function mintTokens(address _organisationAddress , address _stakeHolderAddress , uint _tokens) public{
+        OrganisationToken tokenContract = OrganisationToken(_organisationAddress);
+        tokenContract.mint(_stakeHolderAddress , _tokens );
     }
 }
