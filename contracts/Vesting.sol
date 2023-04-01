@@ -2,15 +2,14 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
 // Uncomment this line to use console.log
 // import "hardhat/console.sol";
 
-contract OrganisationToken is ERC20, Ownable {
+contract OrganisationToken is ERC20 {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
 
-    function mint(address to, uint256 amount) public onlyOwner {
+    function mint(address to, uint256 amount) public {
         _mint(to, amount);
     }
 }
@@ -46,6 +45,19 @@ contract Vesting {
         uint timeLock,
         uint tokens
     );
+    event OrganisationListed(
+        string tokenName,
+        string tokenSymbol,
+          address  contractAddress,
+           address  admin
+    );
+
+    event Whitelist(
+        UserRole userRole,
+        address organisationAddress
+    );
+
+    event Minted(address receiver , uint tokensMinted);
 
     Organisation[] organisations;
     address megaAdmin;
@@ -69,16 +81,15 @@ contract Vesting {
         });
         organisations.push(organisation);
         organisationAddress[_contractAddress] = organisation;
+        emit OrganisationListed(_tokenName,
+            _tokenSymbol,
+             _contractAddress,
+            msg.sender);
     }
 
     function getOrganisations() public view returns (Organisation[] memory) {
         return organisations;
     }
-    // UserRole userType;
-        address stakeHolderAddress;
-        uint timeLock;
-        uint tokens;
-        bool isWhiteListed;
 
     function addStakeHolders(
         UserRole _userRole,
@@ -122,10 +133,33 @@ contract Vesting {
         for (uint i = 0; i < roleHolders.length; i++) {
             roleHolders[i].isWhiteListed = true;
         }
+        emit Whitelist(_userRole, _organisationAddress);
+    }
+    function getWhiteList(address _organisationAddress) public view returns(stakeHolder[] memory){
+        if((Holders[_organisationAddress][UserRole.Founder])[0].isWhiteListed){
+            return Holders[_organisationAddress][UserRole.Founder];
+        }
+        else 
+            if((Holders[_organisationAddress][UserRole.Advisor])[0].isWhiteListed){
+            return Holders[_organisationAddress][UserRole.Advisor];
+        }
+        else
+        if((Holders[_organisationAddress][UserRole.Investor])[0].isWhiteListed){
+            return Holders[_organisationAddress][UserRole.Investor];
+        }
+        else
+        return new stakeHolder[](0);
     }
 
-    function mintTokens(address _organisationAddress , address _stakeHolderAddress , uint _tokens) public{
+    function mintTokens(address _organisationAddress ,UserRole _userRole , address _stakeHolderAddress , uint _tokens) public{
+        require(msg.sender == _stakeHolderAddress);
+        stakeHolder[] storage stakeHolders = Holders[_organisationAddress][_userRole];
+        for (uint i = 0; i < stakeHolders.length; i++) {
+           require( stakeHolders[i].tokens >=_tokens ,"Not Enough Tokens");
+           stakeHolders[i].tokens -= _tokens;
+        }
         OrganisationToken tokenContract = OrganisationToken(_organisationAddress);
         tokenContract.mint(_stakeHolderAddress , _tokens );
+        emit Minted(_stakeHolderAddress , _tokens);
     }
 }
