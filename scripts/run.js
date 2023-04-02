@@ -47,7 +47,7 @@ async function main() {
   await vesting
     .connect(admin1)
     .addStakeHolders(
-      2,
+      1,
       investor.address,
       parseInt(Date.now() / 1000),
       100,
@@ -55,7 +55,7 @@ async function main() {
     );
 
   console.log("--------------Fetching Stakeholders----------------");
-  let holders = await vesting.getHolders(Organisation1.contractAddress, 2);
+  let holders = await vesting.getHolders(Organisation1.contractAddress, 1);
   console.log(holders);
 
   console.log("--------------Token Balances----------------");
@@ -68,9 +68,9 @@ async function main() {
   console.log(balance + "----Balance----");
 
   console.log("--------------Whitelisting----------------");
-  await vesting.whitelist(2, Organisation1.contractAddress);
+  await vesting.whitelist(1, Organisation1.contractAddress);
   console.log("--------------Fetching Stakeholders----------------");
-  holders = await vesting.getHolders(Organisation1.contractAddress, 2);
+  holders = await vesting.getHolders(Organisation1.contractAddress, 1);
   console.log(holders);
   console.log("--------------Whitelisting Fetching----------------");
   const whitelisted = await vesting.getWhiteList(Organisation1.contractAddress);

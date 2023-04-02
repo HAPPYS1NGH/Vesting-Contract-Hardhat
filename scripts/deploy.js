@@ -11,7 +11,7 @@ async function main() {
   const vesting = await Vesting.deploy();
   await vesting.deployed();
 
-  console.log(`Vesting Contrat deployed to ${vesting.address}`);
+  console.log(`Vesting Contract deployed to ${vesting.address}`);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

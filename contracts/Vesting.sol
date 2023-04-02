@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
-
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-
-// Uncomment this line to use console.log
-import "hardhat/console.sol";
 
 // Deployed at 0x3e9C748E9DBB864Ee4dE65FA16343Cde878DF7D0
 
@@ -150,30 +146,22 @@ contract Vesting {
     function getWhiteList(
         address _organisationAddress
     ) public view returns (stakeHolder[] memory) {
-        // console.log("In Contract");
-        // console.log(
-        //     Holders[_organisationAddress][UserRole.Advisor][0]
-        //         .stakeHolderAddress
-        // );
-        // console.log(
-        //     Holders[_organisationAddress][UserRole.Advisor][0].isWhiteListed
-        // );
-        // console.log("Out Contract");
         if (
+            Holders[_organisationAddress][UserRole.Founder].length > 0 &&
             (Holders[_organisationAddress][UserRole.Founder])[0].isWhiteListed
         ) {
             return Holders[_organisationAddress][UserRole.Founder];
         } else if (
+            Holders[_organisationAddress][UserRole.Advisor].length > 0 &&
             (Holders[_organisationAddress][UserRole.Advisor])[0].isWhiteListed
         ) {
             return Holders[_organisationAddress][UserRole.Advisor];
         } else if (
+            Holders[_organisationAddress][UserRole.Investor].length > 0 &&
             (Holders[_organisationAddress][UserRole.Investor])[0].isWhiteListed
         ) {
             return Holders[_organisationAddress][UserRole.Investor];
-        } else {
-            revert("Nothing Matched , Try Adding more Participants");
-        }
+        } else revert("Not Found the Account");
     }
 
     function mintTokens(
@@ -192,14 +180,9 @@ contract Vesting {
         OrganisationToken tokenContract = OrganisationToken(
             _organisationAddress
         );
-        console.log("Inside the Function Mint");
         for (uint i = 0; i < stakeHolders.length; i++) {
             if (stakeHolders[i].stakeHolderAddress == _stakeHolderAddress) {
-                console.log(stakeHolders[i].timeLock);
-                console.log("Contract");
-                console.log(block.timestamp);
                 require(stakeHolders[i].tokens >= _tokens, "Not Enough Tokens");
-
                 require(
                     stakeHolders[i].timeLock < block.timestamp,
                     "Tokens are time Locked"
