@@ -4,7 +4,9 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 // Uncomment this line to use console.log
-// import "hardhat/console.sol";
+import "hardhat/console.sol";
+
+// Deployed at 0x3e9C748E9DBB864Ee4dE65FA16343Cde878DF7D0
 
 contract OrganisationToken is ERC20 {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
@@ -36,7 +38,8 @@ contract Vesting {
     }
 
     mapping(address => Organisation) organisationAddress;
-    mapping(address => mapping (UserRole => stakeHolder[] )) Holders;
+    //Make it public or getFunction
+    mapping(address => mapping(UserRole => stakeHolder[])) Holders;
 
     event addedStakeHolder(
         address organisationAddress,
@@ -48,16 +51,13 @@ contract Vesting {
     event OrganisationListed(
         string tokenName,
         string tokenSymbol,
-          address  contractAddress,
-           address  admin
+        address contractAddress,
+        address admin
     );
 
-    event Whitelist(
-        UserRole userRole,
-        address organisationAddress
-    );
+    event Whitelist(UserRole userRole, address organisationAddress);
 
-    event Minted(address receiver , uint tokensMinted);
+    event Minted(address receiver, uint tokensMinted);
 
     Organisation[] organisations;
     address megaAdmin;
@@ -81,10 +81,12 @@ contract Vesting {
         });
         organisations.push(organisation);
         organisationAddress[_contractAddress] = organisation;
-        emit OrganisationListed(_tokenName,
+        emit OrganisationListed(
+            _tokenName,
             _tokenSymbol,
-             _contractAddress,
-            msg.sender);
+            _contractAddress,
+            msg.sender
+        );
     }
 
     function getOrganisations() public view returns (Organisation[] memory) {
@@ -102,8 +104,16 @@ contract Vesting {
             msg.sender == organisationAddress[_organisationAddress].admin,
             "Only admins can add Stakeholders"
         );
-        
-        Holders[_organisationAddress][_userRole].push(stakeHolder(_userRole, _stakeHolderAddress, _timeLock, _tokens, false));
+
+        Holders[_organisationAddress][_userRole].push(
+            stakeHolder(
+                _userRole,
+                _stakeHolderAddress,
+                _timeLock,
+                _tokens,
+                false
+            )
+        );
         emit addedStakeHolder(
             _organisationAddress,
             _userRole,
@@ -114,11 +124,10 @@ contract Vesting {
     }
 
     function getHolders(
-        address _organisationAddress ,
+        address _organisationAddress,
         UserRole _userRole
-
     ) public view returns (stakeHolder[] memory) {
-        return Holders[_organisationAddress][_userRole] ;
+        return Holders[_organisationAddress][_userRole];
     }
 
     function whitelist(
@@ -129,37 +138,76 @@ contract Vesting {
             msg.sender == organisationAddress[_organisationAddress].admin,
             "Only admins can Whitelist Stakeholders"
         );
-        stakeHolder[] storage roleHolders = Holders[_organisationAddress][_userRole];
+        stakeHolder[] storage roleHolders = Holders[_organisationAddress][
+            _userRole
+        ];
         for (uint i = 0; i < roleHolders.length; i++) {
             roleHolders[i].isWhiteListed = true;
         }
         emit Whitelist(_userRole, _organisationAddress);
     }
-    function getWhiteList(address _organisationAddress) public view returns(stakeHolder[] memory){
-        if((Holders[_organisationAddress][UserRole.Founder])[0].isWhiteListed){
+
+    function getWhiteList(
+        address _organisationAddress
+    ) public view returns (stakeHolder[] memory) {
+        // console.log("In Contract");
+        // console.log(
+        //     Holders[_organisationAddress][UserRole.Advisor][0]
+        //         .stakeHolderAddress
+        // );
+        // console.log(
+        //     Holders[_organisationAddress][UserRole.Advisor][0].isWhiteListed
+        // );
+        // console.log("Out Contract");
+        if (
+            (Holders[_organisationAddress][UserRole.Founder])[0].isWhiteListed
+        ) {
             return Holders[_organisationAddress][UserRole.Founder];
-        }
-        else 
-            if((Holders[_organisationAddress][UserRole.Advisor])[0].isWhiteListed){
+        } else if (
+            (Holders[_organisationAddress][UserRole.Advisor])[0].isWhiteListed
+        ) {
             return Holders[_organisationAddress][UserRole.Advisor];
-        }
-        else
-        if((Holders[_organisationAddress][UserRole.Investor])[0].isWhiteListed){
+        } else if (
+            (Holders[_organisationAddress][UserRole.Investor])[0].isWhiteListed
+        ) {
             return Holders[_organisationAddress][UserRole.Investor];
+        } else {
+            revert("Nothing Matched , Try Adding more Participants");
         }
-        else
-        return new stakeHolder[](0);
     }
 
-    function mintTokens(address _organisationAddress ,UserRole _userRole , address _stakeHolderAddress , uint _tokens) public{
-        require(msg.sender == _stakeHolderAddress);
-        stakeHolder[] storage stakeHolders = Holders[_organisationAddress][_userRole];
+    function mintTokens(
+        address _organisationAddress,
+        UserRole _userRole,
+        address _stakeHolderAddress,
+        uint _tokens
+    ) public {
+        require(
+            msg.sender == _stakeHolderAddress,
+            "Only Owner of Tokens can Mint Tokens"
+        );
+        stakeHolder[] storage stakeHolders = Holders[_organisationAddress][
+            _userRole
+        ];
+        OrganisationToken tokenContract = OrganisationToken(
+            _organisationAddress
+        );
+        console.log("Inside the Function Mint");
         for (uint i = 0; i < stakeHolders.length; i++) {
-           require( stakeHolders[i].tokens >=_tokens ,"Not Enough Tokens");
-           stakeHolders[i].tokens -= _tokens;
+            if (stakeHolders[i].stakeHolderAddress == _stakeHolderAddress) {
+                console.log(stakeHolders[i].timeLock);
+                console.log("Contract");
+                console.log(block.timestamp);
+                require(stakeHolders[i].tokens >= _tokens, "Not Enough Tokens");
+
+                require(
+                    stakeHolders[i].timeLock < block.timestamp,
+                    "Tokens are time Locked"
+                );
+                stakeHolders[i].tokens -= _tokens;
+                tokenContract.mint(_stakeHolderAddress, _tokens);
+                emit Minted(_stakeHolderAddress, _tokens);
+            }
         }
-        OrganisationToken tokenContract = OrganisationToken(_organisationAddress);
-        tokenContract.mint(_stakeHolderAddress , _tokens );
-        emit Minted(_stakeHolderAddress , _tokens);
     }
 }

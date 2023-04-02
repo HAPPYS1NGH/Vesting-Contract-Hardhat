@@ -3,7 +3,7 @@ const {
 } = require("hardhat/internal/hardhat-network/stack-traces/model");
 
 async function main() {
-  const [admin1, admin2] = await hre.ethers.getSigners();
+  const [admin1, admin2, investor] = await hre.ethers.getSigners();
   console.log("--------------Starting----------------");
   console.log("Admin1 " + admin1.address + "\nAdmin2 " + admin2.address);
   console.log("--------------Contract----------------");
@@ -40,13 +40,22 @@ async function main() {
     .addStakeHolders(
       0,
       admin1.address,
-      Date.now() + 1000,
+      parseInt(Date.now() / 1000),
       10,
+      Organisation1.contractAddress
+    );
+  await vesting
+    .connect(admin1)
+    .addStakeHolders(
+      2,
+      investor.address,
+      parseInt(Date.now() / 1000),
+      100,
       Organisation1.contractAddress
     );
 
   console.log("--------------Fetching Stakeholders----------------");
-  const holders = await vesting.getHolders(Organisation1.contractAddress, 0);
+  let holders = await vesting.getHolders(Organisation1.contractAddress, 2);
   console.log(holders);
 
   console.log("--------------Token Balances----------------");
@@ -59,16 +68,24 @@ async function main() {
   console.log(balance + "----Balance----");
 
   console.log("--------------Whitelisting----------------");
-  await vesting.whitelist(0, Organisation1.contractAddress);
+  await vesting.whitelist(2, Organisation1.contractAddress);
+  console.log("--------------Fetching Stakeholders----------------");
+  holders = await vesting.getHolders(Organisation1.contractAddress, 2);
+  console.log(holders);
   console.log("--------------Whitelisting Fetching----------------");
   const whitelisted = await vesting.getWhiteList(Organisation1.contractAddress);
   console.log(whitelisted);
-  setTimeout(async () => {
-    vesting.mintTokens(Organisation1.contractAddress, admin1.address, 5);
-    console.log("-----------MINTING------------");
-    balance = await Organisation1Token.balanceOf(holders[0].stakeHolderAddress);
-    console.log("----Balance is "+ balance+" ----");
-  }, 1000);
+  // setTimeout(async () => {
+  //   vesting.mintTokens(Organisation1.contractAddress, 2, admin1.address, 5);
+  //   console.log("-----------MINTING------------");
+  //   balance = await Organisation1Token.balanceOf(holders[0].stakeHolderAddress);
+  //   console.log("----Balance is " + balance + " ----");
+  // }, 1000);
+
+  console.log("-----------MINTING------------");
+  await vesting
+    .connect(investor)
+    .mintTokens(Organisation1.contractAddress, 2, investor.address, 5);
 
   console.log("--------------Token Balances----------------");
   balance = await Organisation1Token.balanceOf(holders[0].stakeHolderAddress);
