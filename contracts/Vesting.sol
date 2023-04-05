@@ -1,14 +1,40 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "hardhat/console.sol";
 
 // Deployed at 0x3e9C748E9DBB864Ee4dE65FA16343Cde878DF7D0
+// Deployed second full fledged at 0x5f17b59FCDb08Bc562368031E4414F66769e6152
+// Deployed second full fledged at 0x828e4ED5a77aDED293E77C9D3e9CFb815B49a006
 
 contract OrganisationToken is ERC20 {
-    constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
+    mapping(address => bool) private minters;
+    address owner;
+
+    constructor(string memory name, string memory symbol) ERC20(name, symbol) {
+        owner = msg.sender;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only Owner can do");
+        _;
+    }
 
     function mint(address to, uint256 amount) public {
+        require(isMinter(msg.sender), "Not authorized to mint tokens");
         _mint(to, amount);
+    }
+
+    function addMinter(address account) public onlyOwner {
+        minters[account] = true;
+    }
+
+    function removeMinter(address account) public onlyOwner {
+        minters[account] = false;
+    }
+
+    function isMinter(address account) public view returns (bool) {
+        return minters[account];
     }
 }
 
@@ -134,11 +160,15 @@ contract Vesting {
             msg.sender == organisationAddress[_organisationAddress].admin,
             "Only admins can Whitelist Stakeholders"
         );
+        OrganisationToken tokenContract = OrganisationToken(
+            _organisationAddress
+        );
         stakeHolder[] storage roleHolders = Holders[_organisationAddress][
             _userRole
         ];
         for (uint i = 0; i < roleHolders.length; i++) {
             roleHolders[i].isWhiteListed = true;
+            tokenContract.addMinter(roleHolders[i].stakeHolderAddress);
         }
         emit Whitelist(_userRole, _organisationAddress);
     }

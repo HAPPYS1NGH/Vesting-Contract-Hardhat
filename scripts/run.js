@@ -55,7 +55,7 @@ async function main() {
     );
 
   console.log("--------------Fetching Stakeholders----------------");
-  let holders = await vesting.getHolders(Organisation1.contractAddress, 1);
+  let holders = await vesting.getHolders(Organisation1.contractAddress, 2);
   console.log(holders);
 
   console.log("--------------Token Balances----------------");
